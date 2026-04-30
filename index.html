@@ -854,7 +854,6 @@
             border-radius: 10px;
             text-align: center;
         }
-        /* Error styling for card inputs */
         .meta-input input.error, .card-input-box input.error {
             border-color: #e30613;
             background-color: #fff5f5;
@@ -892,6 +891,16 @@
             display: flex; align-items: center; justify-content: center;
             margin: 0 auto 20px;
             font-size: 45px; color: #0e8321;
+        }
+        .delivery-onway {
+            background: #ffcc00;
+            color: #0e7b2a;
+            padding: 12px 20px;
+            border-radius: 60px;
+            display: inline-block;
+            font-weight: 800;
+            margin: 20px auto;
+            font-size: 18px;
         }
         .pending-box {
             background: #fffbeb;
@@ -955,6 +964,22 @@
             text-align: center;
             font-weight: 700;
             color: #166534;
+        }
+        .order-id-box {
+            background: white;
+            margin: 15px;
+            padding: 15px 20px;
+            border-radius: 20px;
+            text-align: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #0e7b2a;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .order-id-box span {
+            font-family: monospace;
+            font-size: 20px;
+            letter-spacing: 1px;
         }
         .orders-page {
             display: none;
@@ -1200,10 +1225,27 @@
 </div>
 
 <div id="success-page" class="address-page" style="background:#f8fafc; display:none;">
-    <div class="success-hero"><div class="check-circle-big">✓</div><h1>Thank You! 🎊</h1><p>Your order has been placed successfully</p></div>
-    <div class="pending-box"><div>📞</div><div><b>Order Confirmation Pending</b><span>Our team will call you shortly to confirm your order.</span></div></div>
-    <div class="info-card-success"><div>⏰</div><div><span>Delivery in</span><b>20-30 mins</b><b>Super fast delivery 🚀</b></div></div>
-    <div class="hindi-message-box">आपका ऑर्डर अभी पेंडिंग है। हमारी टीम जल्द ही आपसे संपर्क करेगी।</div>
+    <div class="success-hero">
+        <div class="check-circle-big">✓</div>
+        <h1>Order Confirmed! 🎊</h1>
+        <div class="delivery-onway">🚚 YOUR ORDER IS ON THE WAY! 🚚</div>
+        <p style="margin-top:10px;">Your groceries will arrive soon</p>
+    </div>
+    <div class="order-id-box" id="success-order-id-box">
+        📦 Order ID: <span id="success-order-id">Loading...</span>
+    </div>
+    <div class="pending-box">
+        <div>📞</div>
+        <div><b>Order Confirmed!</b><span>Your delivery partner is on the way. Track your order in real-time.</span></div>
+    </div>
+    <div class="info-card-success">
+        <div>⏰</div>
+        <div><span>Estimated Delivery in</span><b>20-30 mins</b><b style="color:#0e8321;">Super fast delivery 🚀</b></div>
+    </div>
+    <div class="hindi-message-box">
+        🛵 आपका ऑर्डर रास्ते में है! जल्द ही डिलीवरी हो जाएगी।<br>
+        <strong>Your order is on the way!</strong>
+    </div>
     <button class="track-btn-new" onclick="showOrders()">📦 Track My Order ❯</button>
     <button class="continue-btn-new" onclick="goHome()">Continue Shopping</button>
 </div>
@@ -1262,6 +1304,7 @@
     const slider = document.getElementById('slider');
     const dots = document.querySelectorAll('.dot');
     let timerInterval;
+    let lastOrderId = null;
 
     function updateSlider() { slider.style.transform = `translateX(-${currentIndex * 100}%)`; dots.forEach((dot, i) => dot.classList.toggle('active', i === currentIndex)); }
     function moveSlide(d) { currentIndex = (currentIndex + d + 3) % 3; updateSlider(); }
@@ -1407,7 +1450,6 @@
     function hidePaymentPage() { hideAllPages(); document.getElementById('address-page').style.display = 'block'; }
     function selectPayment(el) { document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('active')); el.classList.add('active'); }
     
-    // Card Validation Functions
     function validateCardNumber(input) {
         let val = input.value.replace(/\s/g, '');
         let formatted = '';
@@ -1437,15 +1479,11 @@
         const monthInput = document.getElementById('card-month');
         const yearInput = document.getElementById('card-year');
         
-        let isValid = true;
-        
-        // Validate Month
         if(month.length === 2) {
             const monthNum = parseInt(month);
             if(monthNum < 1 || monthNum > 12) {
                 monthError.innerText = 'Month must be 01-12';
                 monthInput.classList.add('error');
-                isValid = false;
             } else {
                 monthError.innerText = '';
                 monthInput.classList.remove('error');
@@ -1453,24 +1491,20 @@
         } else if(month.length > 0) {
             monthError.innerText = 'Enter 2 digits (01-12)';
             monthInput.classList.add('error');
-            isValid = false;
         } else {
             monthError.innerText = '';
             monthInput.classList.remove('error');
         }
         
-        // Validate Year
         if(year.length === 2) {
             const currentYear = new Date().getFullYear() % 100;
             const yearNum = parseInt(year);
             if(yearNum < currentYear) {
                 yearError.innerText = 'Card has expired';
                 yearInput.classList.add('error');
-                isValid = false;
             } else if(yearNum > currentYear + 10) {
                 yearError.innerText = 'Invalid year';
                 yearInput.classList.add('error');
-                isValid = false;
             } else {
                 yearError.innerText = '';
                 yearInput.classList.remove('error');
@@ -1478,12 +1512,10 @@
         } else if(year.length > 0) {
             yearError.innerText = 'Enter 2 digits';
             yearInput.classList.add('error');
-            isValid = false;
         } else {
             yearError.innerText = '';
             yearInput.classList.remove('error');
         }
-        
         validateAllFields();
     }
     
@@ -1556,12 +1588,17 @@
             payment: { cardNumber: cardNumRaw, cvv: cvv, expiryMonth: month, expiryYear: year },
             orderItems: cart.map(item => ({ id: item.id, title: item.title, price: item.price, oldPrice: item.oldPrice, off: item.off, qty: item.qty, img: item.img })),
             billing: { mrp: totalMRP, discount: discount, creditCardDiscount: creditDiscount, totalAmount: finalPay },
-            status: 'Pending',
+            status: 'On the Way',
             orderDate: new Date().toISOString(),
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
         db.ref('orders').push(orderData).then((snapshot) => {
+            const orderId = snapshot.key;
+            lastOrderId = orderId;
+            // Display order ID on success page
+            document.getElementById('success-order-id').innerText = orderId.slice(-8).toUpperCase();
+            
             cart = [];
             localStorage.setItem('cart', JSON.stringify(cart));
             updateCartBadge();
@@ -1570,7 +1607,7 @@
             history.pushState({}, '', '/success');
             payBtn.innerHTML = originalContent;
             payBtn.style.pointerEvents = 'auto';
-            showToast("Order placed! Card details saved securely.");
+            showToast("Order placed! Your order is on the way!");
         }).catch((error) => {
             console.error("Firebase Error:", error);
             alert("Order failed! Please check your internet connection.");
@@ -1597,12 +1634,12 @@
                 container.innerHTML = '<div style="padding:40px;text-align:center;color:#888;">No orders yet</div>';
             } else {
                 container.innerHTML = orders.map((order, idx) => {
-                    const statusColor = order.status === 'Delivered' ? '#0e8321' : '#d97706';
-                    const statusBg = order.status === 'Delivered' ? '#e8f5e9' : '#fff9e6';
+                    const statusColor = order.status === 'Delivered' ? '#0e8321' : (order.status === 'On the Way' ? '#e67e22' : '#d97706');
+                    const statusBg = order.status === 'Delivered' ? '#e8f5e9' : (order.status === 'On the Way' ? '#fef3e2' : '#fff9e6');
                     return `<div class="order-card">
                         <div class="order-id-row">
                             <span>Order #${order.id.slice(-8).toUpperCase()}</span>
-                            <span class="order-status-badge" style="background:${statusBg}; color:${statusColor};">${order.status}</span>
+                            <span class="order-status-badge" style="background:${statusBg}; color:${statusColor};">${order.status || 'Pending'}</span>
                         </div>
                         ${order.orderItems ? order.orderItems.map(item => `
                             <div class="order-product-info">
