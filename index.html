@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BigBasket</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Meta Pixel Code -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '2187378738738071');
+    fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=2187378738738071&ev=PageView&noscript=1"
+    /></noscript>
+    <!-- End Meta Pixel Code -->
+    
     <style>
         :root {
             --bb-green: #0e7b2a;
@@ -1360,6 +1379,16 @@
         localStorage.setItem('cart', JSON.stringify(cart));
         updateCartBadge();
         showToast("Added to cart!");
+        // Track AddToCart event for Facebook Pixel
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'AddToCart', {
+                content_name: product.title,
+                content_ids: [product.id],
+                content_type: 'product',
+                value: product.price,
+                currency: 'INR'
+            });
+        }
     }
 
     function buyNowFromModal() {
@@ -1596,8 +1625,18 @@
         db.ref('orders').push(orderData).then((snapshot) => {
             const orderId = snapshot.key;
             lastOrderId = orderId;
-            // Display order ID on success page
             document.getElementById('success-order-id').innerText = orderId.slice(-8).toUpperCase();
+            
+            // Track Purchase event for Facebook Pixel
+            if (typeof fbq !== 'undefined') {
+                fbq('track', 'Purchase', {
+                    value: finalPay,
+                    currency: 'INR',
+                    content_ids: cart.map(item => item.id.toString()),
+                    content_type: 'product',
+                    num_items: cart.reduce((sum, item) => sum + item.qty, 0)
+                });
+            }
             
             cart = [];
             localStorage.setItem('cart', JSON.stringify(cart));
